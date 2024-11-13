@@ -1,0 +1,28 @@
+name: skribbl_clone
+description: "Skribbl like game where users can draw and guess shapes."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.5.4
+
+dependencies:
+  cupertino_icons: ^1.0.8
+  flutter:
+    sdk: flutter
+  flutter_colorpicker: ^1.1.0
+  get: ^4.6.6
+  http: ^1.2.2
+  socket_io_client: ^3.0.1
+
+dev_dependencies:
+  flutter_lints: ^4.0.0
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  assets:
+    - assets/
+
+  uses-material-design: true
