@@ -129,6 +129,14 @@ io.on('connection', (socket: Socket) => {
     socket.on("clear-canvas", ({roomName})=>{
         io.to(roomName).emit('clear-canvas', null);
     });
+
+    //message
+    socket.on("message", ({message, playerName, roomName})=>{
+        io.to(roomName).emit("message", {
+            "playerName": playerName,
+            "message": message,
+        });
+    });
 });
 
 // Set server listen port

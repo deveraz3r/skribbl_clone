@@ -15,10 +15,17 @@ class PaintView extends StatefulWidget {
 }
 
 class _PaintViewState extends State<PaintView> {
-  Map dataOfRoom = Get.arguments["data"];
+  Map clientData = Get.arguments["data"];
   final String screenFrom = Get.arguments["from"];
+  Map dataOfRoom = {};
+
+  //contains Offset points to draw on screen
   List<TouchPoints> points = [];
+  //generate blank spaces/hints for given word
   List<Widget> listofAlphabets = [];
+  // each index will have name[0] and message[1]
+  List<List<String>> messages = [];
+  final TextEditingController _messageTextController = TextEditingController();
 
   //paint brush
   StrokeCap strokeType = StrokeCap.round;
@@ -35,6 +42,12 @@ class _PaintViewState extends State<PaintView> {
     connect();
   }
 
+  @override
+  void dispose() {
+    _socket.dispose();
+    super.dispose();
+  }
+
   //Socket io client connection
   void connect() {
     _socket = IO.io("http://192.168.102.1:3000", <String, dynamic>{
@@ -44,9 +57,9 @@ class _PaintViewState extends State<PaintView> {
     _socket.connect();
 
     if (screenFrom == "createRoom") {
-      _socket.emit("create-room", dataOfRoom);
+      _socket.emit("create-room", clientData);
     } else if (screenFrom == "joinRoom") {
-      _socket.emit("join-room", dataOfRoom);
+      _socket.emit("join-room", clientData);
     }
 
     //listen to socket
@@ -96,7 +109,6 @@ class _PaintViewState extends State<PaintView> {
 
       //strokeWidth change
       _socket.on("strokeWidth-change", (width) {
-        print("Received width: $width, Type: ${width.runtimeType}");
         setState(() {
           strokeWidth = width;
         });
@@ -106,6 +118,13 @@ class _PaintViewState extends State<PaintView> {
       _socket.on("clear-canvas", (_) {
         setState(() {
           points.clear();
+        });
+      });
+
+      //message
+      _socket.on("message", (data) {
+        setState(() {
+          messages.add(<String>[data['playerName'], data['message']]);
         });
       });
     });
@@ -238,7 +257,47 @@ class _PaintViewState extends State<PaintView> {
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: listofAlphabets,
+                children: listofAlphabets, //word to guess
+              ),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: messages.length,
+                  itemBuilder: (context, index) {
+                    return ListTile(
+                      title: Text(messages[index][0]), //sender name
+                      subtitle: Text(messages[index][1]), //message
+                    );
+                  },
+                ),
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _messageTextController,
+                      decoration: const InputDecoration(
+                        hintText: "Guess word",
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () {
+                      if (_messageTextController.text.isNotEmpty) {
+                        _socket.emit("message", {
+                          'message': _messageTextController.text,
+                          'playerName': clientData['playerName'],
+                          'roomName': dataOfRoom['roomName']
+                        });
+                        _messageTextController.clear();
+                      }
+                    },
+                    icon: const Icon(Icons.send),
+                  )
+                ],
+              ),
+              const SizedBox(
+                height: 10,
               ),
             ],
           )
