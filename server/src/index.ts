@@ -119,6 +119,16 @@ io.on('connection', (socket: Socket) => {
     socket.on("color-change", ({color, roomName})=>{
         io.to(roomName).emit('color-change', color);
     });
+
+    //strokeWidth change
+    socket.on("strokeWidth-change", ({width, roomName})=>{
+        io.to(roomName).emit('strokeWidth-change', width);
+    });
+
+    //clear drawing
+    socket.on("clear-canvas", ({roomName})=>{
+        io.to(roomName).emit('clear-canvas', null);
+    });
 });
 
 // Set server listen port

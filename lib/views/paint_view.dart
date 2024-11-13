@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:get/get.dart';
@@ -48,9 +49,10 @@ class _PaintViewState extends State<PaintView> {
     }
 
     //listen to socket
-    _socket.onConnect((data) {
-      // ignore: avoid_print
-      print("Connected!");
+    _socket.onConnect((_) {
+      if (kDebugMode) {
+        print("Connected!");
+      }
 
       //listen to event "updateRoom", when data is recived update the rooms data
       _socket.on("updateRoom", (data) {
@@ -85,7 +87,29 @@ class _PaintViewState extends State<PaintView> {
       //change color
       _socket.on("color-change", (color) {
         setState(() {
-          selectedColor = Color(color);
+          int value = int.parse(color, radix: 16);
+          selectedColor = Color(value);
+        });
+      });
+
+      //change color
+      _socket.on("strokeWidth-change", (width) {
+        setState(() {
+          strokeWidth = double.parse(width);
+        });
+      });
+
+      //strokeWidth change
+      _socket.on("strokeWidth-change", (width) {
+        setState(() {
+          strokeWidth = width;
+        });
+      });
+
+      //clear drawing
+      _socket.on("clear-canvas", (_) {
+        setState(() {
+          points.clear();
         });
       });
     });
@@ -187,14 +211,20 @@ class _PaintViewState extends State<PaintView> {
                       activeColor: selectedColor,
                       onChanged: (value) {
                         setState(() {
-                          strokeWidth = value;
+                          Map map = {
+                            'width': value,
+                            'roomName': dataOfRoom['roomName'],
+                          };
+
+                          _socket.emit("strokeWidth-change", map);
                         });
                       },
                     ),
                   ),
                   IconButton(
                     onPressed: () {
-                      //clear logic here
+                      _socket.emit(
+                          "clear-canvas", {"roomName": dataOfRoom['roomName']});
                     },
                     icon: Icon(
                       Icons.layers_clear,
