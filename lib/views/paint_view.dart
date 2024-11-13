@@ -18,6 +18,7 @@ class _PaintViewState extends State<PaintView> {
   Map dataOfRoom = Get.arguments["data"];
   final String screenFrom = Get.arguments["from"];
   List<TouchPoints> points = [];
+  List<Widget> listofAlphabets = [];
 
   //paint brush
   StrokeCap strokeType = StrokeCap.round;
@@ -59,6 +60,7 @@ class _PaintViewState extends State<PaintView> {
         setState(() {
           dataOfRoom = data;
         });
+        getWord();
 
         if (data["isJoin"] != true) {
           //start the timer
@@ -113,6 +115,15 @@ class _PaintViewState extends State<PaintView> {
         });
       });
     });
+  }
+
+  void getWord() {
+    String word = dataOfRoom['word'];
+    listofAlphabets.clear();
+
+    for (int i = 0; i < word.length; i++) {
+      listofAlphabets.add(const Text("_"));
+    }
   }
 
   void selectColor() {
@@ -210,14 +221,12 @@ class _PaintViewState extends State<PaintView> {
                       value: strokeWidth,
                       activeColor: selectedColor,
                       onChanged: (value) {
-                        setState(() {
-                          Map map = {
-                            'width': value,
-                            'roomName': dataOfRoom['roomName'],
-                          };
+                        Map map = {
+                          'width': value,
+                          'roomName': dataOfRoom['roomName'],
+                        };
 
-                          _socket.emit("strokeWidth-change", map);
-                        });
+                        _socket.emit("strokeWidth-change", map);
                       },
                     ),
                   ),
@@ -232,7 +241,11 @@ class _PaintViewState extends State<PaintView> {
                     ),
                   ),
                 ],
-              )
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: listofAlphabets,
+              ),
             ],
           )
         ],
