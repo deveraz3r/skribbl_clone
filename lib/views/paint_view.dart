@@ -59,8 +59,8 @@ class _PaintViewState extends State<PaintView> {
       _socket.on("updateRoom", (data) {
         setState(() {
           dataOfRoom = data;
+          getWord();
         });
-        getWord();
 
         if (data["isJoin"] != true) {
           //start the timer
@@ -94,15 +94,9 @@ class _PaintViewState extends State<PaintView> {
         });
       });
 
-      //change color
-      _socket.on("strokeWidth-change", (width) {
-        setState(() {
-          strokeWidth = double.parse(width);
-        });
-      });
-
       //strokeWidth change
       _socket.on("strokeWidth-change", (width) {
+        print("Received width: $width, Type: ${width.runtimeType}");
         setState(() {
           strokeWidth = width;
         });
