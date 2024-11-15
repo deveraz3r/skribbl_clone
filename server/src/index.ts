@@ -31,7 +31,6 @@ io.on('connection', (socket: Socket) => {
     // Create room callback
     socket.on("create-room", async ({ playerName, roomName, occupancy, maxRounds }) => {
         try {
-            console.log("reached create room");
             // Check if the room already exists
             const existingRoom = await RoomModel.findOne({ roomName });
             if (existingRoom) {
@@ -119,17 +118,15 @@ io.on('connection', (socket: Socket) => {
                 return;
             }
             
-            let index = room.turnIndex;
-            if(index == room.players.length){
+            if(room.turnIndex == room.players.length){
                 room.currentRound+=1;
             }
             if(room.currentRound <= room.maxRounds){
                 //continue game with next users turn
-                const word = getWord();
-                room.word = word;
-                room.turnIndex = (index+1)%room.players.length;
+                room.word = getWord();
+                room.turnIndex = (room.turnIndex+1)%room.players.length;
                 room.turn = room.players[room.turnIndex];
-                room.save;
+                await room.save();
                 io.to(roomName).emit("change-turn", room);
             }
             else{

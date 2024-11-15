@@ -58,7 +58,10 @@ class _PaintViewState extends State<PaintView> {
     _timer = Timer.periodic(oneSec, (Timer timer) {
       if (start == 0) {
         //change turn if all players have gussed correct word or time runs out
-        _socket.emit("change-turn", {dataOfRoom['roomName']});
+        Map turnData = {'roomName': dataOfRoom['roomName']};
+        if (clientData["playerName"] == dataOfRoom["turn"]["playerName"]) {
+          _socket.emit("change-turn", turnData);
+        }
         setState(() {
           _timer.cancel();
         });
@@ -158,7 +161,9 @@ class _PaintViewState extends State<PaintView> {
 
         //change turn if all players have gussed correct word or time runs out
         if (gussedUserCounter == dataOfRoom['players'].length - 1) {
-          _socket.emit("change-turn", {dataOfRoom['roomName']});
+          if (clientData["playerName"] == dataOfRoom["turn"]["playerName"]) {
+            _socket.emit("change-turn", {'roomName': dataOfRoom['roomName']});
+          }
         }
       });
 
@@ -174,12 +179,13 @@ class _PaintViewState extends State<PaintView> {
                   dataOfRoom = data;
                   getWord();
                   gussedUserCounter = 0;
-                  start = 0;
+                  start = 60;
                   points.clear();
+                  _timer.cancel();
+                  startTimer();
+                  Navigator.of(context).pop(); //TODO: remove warning
+                  setState(() {});
                 });
-                Navigator.of(context).pop(); //TODO: remove warning
-                _timer.cancel();
-                startTimer();
               });
               return AlertDialog(
                 content: Text("Word was $word"),
@@ -254,28 +260,37 @@ class _PaintViewState extends State<PaintView> {
                 height: height * 0.55,
                 child: GestureDetector(
                   onPanUpdate: (details) {
-                    _socket.emit("paint", {
-                      'details': {
-                        'dx': details.localPosition.dx,
-                        'dy': details.localPosition.dy,
-                      },
-                      'roomName': dataOfRoom['roomName'],
-                    });
+                    if (clientData["playerName"] ==
+                        dataOfRoom["turn"]["playerName"]) {
+                      _socket.emit("paint", {
+                        'details': {
+                          'dx': details.localPosition.dx,
+                          'dy': details.localPosition.dy,
+                        },
+                        'roomName': dataOfRoom['roomName'],
+                      });
+                    }
                   },
                   onPanStart: (details) {
-                    _socket.emit("paint", {
-                      'details': {
-                        'dx': details.localPosition.dx,
-                        'dy': details.localPosition.dy,
-                      },
-                      'roomName': dataOfRoom['roomName'],
-                    });
+                    if (clientData["playerName"] ==
+                        dataOfRoom["turn"]["playerName"]) {
+                      _socket.emit("paint", {
+                        'details': {
+                          'dx': details.localPosition.dx,
+                          'dy': details.localPosition.dy,
+                        },
+                        'roomName': dataOfRoom['roomName'],
+                      });
+                    }
                   },
                   onPanEnd: (details) {
-                    _socket.emit("paint", {
-                      'details': null,
-                      'roomName': dataOfRoom['roomName'],
-                    });
+                    if (clientData["playerName"] ==
+                        dataOfRoom["turn"]["playerName"]) {
+                      _socket.emit("paint", {
+                        'details': null,
+                        'roomName': dataOfRoom['roomName'],
+                      });
+                    }
                   },
                   child: SizedBox.expand(
                     child: ClipRRect(
@@ -290,44 +305,46 @@ class _PaintViewState extends State<PaintView> {
                   ),
                 ),
               ),
-              Row(
-                children: [
-                  IconButton(
-                    onPressed: selectColor,
-                    icon: Icon(
-                      Icons.color_lens,
-                      color: selectedColor,
-                    ),
-                  ),
-                  Expanded(
-                    child: Slider(
-                      min: 1,
-                      max: 10,
-                      label: "Stroke width $strokeWidth",
-                      value: strokeWidth,
-                      activeColor: selectedColor,
-                      onChanged: (value) {
-                        Map map = {
-                          'width': value,
-                          'roomName': dataOfRoom['roomName'],
-                        };
+              !(clientData["playerName"] == dataOfRoom["turn"]["playerName"])
+                  ? const SizedBox()
+                  : Row(
+                      children: [
+                        IconButton(
+                          onPressed: selectColor,
+                          icon: Icon(
+                            Icons.color_lens,
+                            color: selectedColor,
+                          ),
+                        ),
+                        Expanded(
+                          child: Slider(
+                            min: 1,
+                            max: 10,
+                            label: "Stroke width $strokeWidth",
+                            value: strokeWidth,
+                            activeColor: selectedColor,
+                            onChanged: (value) {
+                              Map map = {
+                                'width': value,
+                                'roomName': dataOfRoom['roomName'],
+                              };
 
-                        _socket.emit("strokeWidth-change", map);
-                      },
+                              _socket.emit("strokeWidth-change", map);
+                            },
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            _socket.emit("clear-canvas",
+                                {"roomName": dataOfRoom['roomName']});
+                          },
+                          icon: Icon(
+                            Icons.layers_clear,
+                            color: selectedColor,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  IconButton(
-                    onPressed: () {
-                      _socket.emit(
-                          "clear-canvas", {"roomName": dataOfRoom['roomName']});
-                    },
-                    icon: Icon(
-                      Icons.layers_clear,
-                      color: selectedColor,
-                    ),
-                  ),
-                ],
-              ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: listofAlphabets, //word to guess
@@ -349,34 +366,36 @@ class _PaintViewState extends State<PaintView> {
                   },
                 ),
               ),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _messageTextController,
-                      decoration: const InputDecoration(
-                        hintText: "Guess word",
-                        border: OutlineInputBorder(),
-                      ),
+              (clientData["playerName"] == dataOfRoom["turn"]["playerName"])
+                  ? const SizedBox()
+                  : Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _messageTextController,
+                            decoration: const InputDecoration(
+                              hintText: "Guess word",
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            if (_messageTextController.text.isNotEmpty) {
+                              _socket.emit("message", {
+                                'message': _messageTextController.text,
+                                'playerName': clientData['playerName'],
+                                'roomName': dataOfRoom['roomName'],
+                                'roundTime': 60,
+                                'timeTaken': 60 - start,
+                              });
+                              _messageTextController.clear();
+                            }
+                          },
+                          icon: const Icon(Icons.send),
+                        )
+                      ],
                     ),
-                  ),
-                  IconButton(
-                    onPressed: () {
-                      if (_messageTextController.text.isNotEmpty) {
-                        _socket.emit("message", {
-                          'message': _messageTextController.text,
-                          'playerName': clientData['playerName'],
-                          'roomName': dataOfRoom['roomName'],
-                          'roundTime': 60,
-                          'timeTaken': 60 - start,
-                        });
-                        _messageTextController.clear();
-                      }
-                    },
-                    icon: const Icon(Icons.send),
-                  )
-                ],
-              ),
               const SizedBox(
                 height: 10,
               ),
@@ -385,7 +404,7 @@ class _PaintViewState extends State<PaintView> {
         ],
       ),
       floatingActionButton: Container(
-        margin: EdgeInsets.all(10),
+        margin: const EdgeInsets.all(10),
         child: FloatingActionButton(
           onPressed: () {},
           elevation: 7,
