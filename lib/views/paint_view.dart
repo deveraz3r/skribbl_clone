@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
@@ -24,8 +26,11 @@ class _PaintViewState extends State<PaintView> {
   //generate blank spaces/hints for given word
   List<Widget> listofAlphabets = [];
   // each index will have name[0] and message[1]
-  List<List<String>> messages = [];
+  List<List> messages = [];
   final TextEditingController _messageTextController = TextEditingController();
+  int gussedUserCounter = 0;
+  int start = 60;
+  late Timer _timer;
 
   //paint brush
   StrokeCap strokeType = StrokeCap.round;
@@ -46,6 +51,23 @@ class _PaintViewState extends State<PaintView> {
   void dispose() {
     _socket.dispose();
     super.dispose();
+  }
+
+  void startTimer() {
+    const Duration oneSec = Duration(seconds: 1);
+    _timer = Timer.periodic(oneSec, (Timer timer) {
+      if (start == 0) {
+        //change turn if all players have gussed correct word or time runs out
+        _socket.emit("change-turn", {dataOfRoom['roomName']});
+        setState(() {
+          _timer.cancel();
+        });
+      } else {
+        setState(() {
+          start--;
+        });
+      }
+    });
   }
 
   //Socket io client connection
@@ -77,6 +99,7 @@ class _PaintViewState extends State<PaintView> {
 
         if (data["isJoin"] != true) {
           //start the timer
+          startTimer();
         }
       });
 
@@ -123,9 +146,45 @@ class _PaintViewState extends State<PaintView> {
 
       //message
       _socket.on("message", (data) {
+        bool isCorrectWord = data['isCorrectWord'];
         setState(() {
-          messages.add(<String>[data['playerName'], data['message']]);
+          if (isCorrectWord) gussedUserCounter++;
+          messages.add([
+            data['playerName'],
+            data['message'],
+            isCorrectWord,
+          ]);
         });
+
+        //change turn if all players have gussed correct word or time runs out
+        if (gussedUserCounter == dataOfRoom['players'].length - 1) {
+          _socket.emit("change-turn", {dataOfRoom['roomName']});
+        }
+      });
+
+      //change turn
+      _socket.on("change-turn", (data) {
+        String word = dataOfRoom['word'];
+
+        showDialog(
+            context: context,
+            builder: (context) {
+              Future.delayed(const Duration(seconds: 3), () {
+                setState(() {
+                  dataOfRoom = data;
+                  getWord();
+                  gussedUserCounter = 0;
+                  start = 0;
+                  points.clear();
+                });
+                Navigator.of(context).pop(); //TODO: remove warning
+                _timer.cancel();
+                startTimer();
+              });
+              return AlertDialog(
+                content: Text("Word was $word"),
+              );
+            });
       });
     });
   }
@@ -135,7 +194,13 @@ class _PaintViewState extends State<PaintView> {
     listofAlphabets.clear();
 
     for (int i = 0; i < word.length; i++) {
-      listofAlphabets.add(const Text("_"));
+      if (clientData["playerName"] == dataOfRoom['turn']['playerName']) {
+        listofAlphabets
+            .add(Text(word[i], style: const TextStyle(color: Colors.black)));
+      } else {
+        listofAlphabets
+            .add(const Text("_", style: TextStyle(color: Colors.black)));
+      }
     }
   }
 
@@ -159,6 +224,14 @@ class _PaintViewState extends State<PaintView> {
             },
           ),
         ),
+        actions: [
+          InkWell(
+            onTap: () {
+              Navigator.of(context).pop();
+            },
+            child: const Text("Close"),
+          ),
+        ],
       ),
     );
   }
@@ -264,8 +337,14 @@ class _PaintViewState extends State<PaintView> {
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     return ListTile(
-                      title: Text(messages[index][0]), //sender name
-                      subtitle: Text(messages[index][1]), //message
+                      title: Text(messages[index][0].toString()), //sender name
+                      subtitle: Text(
+                        messages[index][1].toString(), //message
+                        style: TextStyle(
+                          color:
+                              messages[index][2] ? Colors.green : Colors.black,
+                        ),
+                      ),
                     );
                   },
                 ),
@@ -287,7 +366,9 @@ class _PaintViewState extends State<PaintView> {
                         _socket.emit("message", {
                           'message': _messageTextController.text,
                           'playerName': clientData['playerName'],
-                          'roomName': dataOfRoom['roomName']
+                          'roomName': dataOfRoom['roomName'],
+                          'roundTime': 60,
+                          'timeTaken': 60 - start,
                         });
                         _messageTextController.clear();
                       }
@@ -302,6 +383,18 @@ class _PaintViewState extends State<PaintView> {
             ],
           )
         ],
+      ),
+      floatingActionButton: Container(
+        margin: EdgeInsets.all(10),
+        child: FloatingActionButton(
+          onPressed: () {},
+          elevation: 7,
+          backgroundColor: Colors.white,
+          child: Text(
+            "$start",
+            style: TextStyle(color: Colors.black, fontSize: 22),
+          ),
+        ),
       ),
     );
   }

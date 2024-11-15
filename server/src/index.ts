@@ -72,7 +72,6 @@ io.on('connection', (socket: Socket) => {
     // Join game callback
     socket.on("join-room", async ({ playerName, roomName }) => {
         try {
-            console.log("Reached room");
             let room = await RoomModel.findOne({ roomName });
 
             if (!room) {
@@ -110,6 +109,38 @@ io.on('connection', (socket: Socket) => {
         }
     });
 
+    //change turn
+    socket.on("change-turn", async ({roomName})=>{
+        try{
+            let room = await RoomModel.findOne({roomName});
+
+            if (!room) {
+                console.log("Room not found");
+                return;
+            }
+            
+            let index = room.turnIndex;
+            if(index == room.players.length){
+                room.currentRound+=1;
+            }
+            if(room.currentRound <= room.maxRounds){
+                //continue game with next users turn
+                const word = getWord();
+                room.word = word;
+                room.turnIndex = (index+1)%room.players.length;
+                room.turn = room.players[room.turnIndex];
+                room.save;
+                io.to(roomName).emit("change-turn", room);
+            }
+            else{
+                //show leader board
+            }
+        }
+        catch(err){
+            console.log(err);
+        }
+    });
+
     //whitebord socket
     socket.on('paint', ({details, roomName})=>{
         io.to(roomName).emit('points', {details: details});
@@ -131,11 +162,39 @@ io.on('connection', (socket: Socket) => {
     });
 
     //message
-    socket.on("message", ({message, playerName, roomName})=>{
-        io.to(roomName).emit("message", {
-            "playerName": playerName,
-            "message": message,
-        });
+    socket.on("message", async ({ message, playerName, roomName, roundTime, timeTaken }) => {
+        try {
+            let room = await RoomModel.findOne({roomName});
+    
+            if (!room) {
+                console.log("Room not found");
+                return;
+            }
+    
+            if (message === room.word) {
+                let userPlayer = room.players.find((player) => player.playerName === playerName);
+    
+                if (userPlayer && timeTaken !== 0) {
+                    userPlayer.points += Math.round(200 / timeTaken) * 10;
+                }
+    
+                room = await room.save();
+    
+                io.to(roomName).emit("message", {
+                    playerName: playerName,
+                    message: "Guessed it!",
+                    isCorrectWord: true,
+                });
+            } else {
+                io.to(roomName).emit("message", {
+                    playerName: playerName,
+                    message: message,
+                    isCorrectWord: false,
+                });
+            }
+        } catch (err) {
+            console.error(err);
+        }
     });
 });
 
