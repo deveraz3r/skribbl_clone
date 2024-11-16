@@ -1,30 +1,19 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema } from "mongoose";
 
-export interface Player extends Document {
-  playerName: string;
-  socketId: string;
-  isPartyLeader: boolean;
-  points: number;
+export interface IPlayer {
+    playerName: string;
+    socketId: string;
+    isPartyLeader: boolean;
+    points: number;
 }
 
-export const playerSchema = new Schema<Player>({
-  playerName: {
-    type: String,
-    trim: true,
-  },
-  socketId: {
-    type: String,
-  },
-  isPartyLeader: {
-    type: Boolean,
-    default: false,
-  },
-  points: {
-    type: Number,
-    default: 0,
-  },
+const PlayerSchema = new Schema<IPlayer>({
+    playerName: { type: String, required: true },
+    socketId: { type: String, required: true },
+    isPartyLeader: { type: Boolean, default: false },
+    points: { type: Number, default: 0 },
 });
 
-const PlayerModel = mongoose.model<Player>('Player', playerSchema);
+const PlayerModel = mongoose.model<IPlayer>("Player", PlayerSchema);
 
-export { PlayerModel };
+export { PlayerSchema, PlayerModel };
