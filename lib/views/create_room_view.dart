@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:skribbl_clone/resources/reusable_elevated_button.dart';
+import 'package:skribbl_clone/resources/widgets/reusable_elevated_button.dart';
 import 'package:skribbl_clone/view_models/create_room_view_model.dart';
 
 class CreateRoomView extends StatelessWidget {

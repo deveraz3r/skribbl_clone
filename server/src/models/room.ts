@@ -35,7 +35,7 @@ const roomSchema = new Schema<Room>({
     },
     currentRound: { 
         type: Number, 
-        default: 1 
+        default: 0 
     },
     players: [playerSchema],
     isJoin: { 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:skribbl_clone/resources/reusable_elevated_button.dart';
+import 'package:skribbl_clone/resources/widgets/reusable_elevated_button.dart';
 import 'package:skribbl_clone/utils/routes/route_names.dart';
 
 class JoinRoomView extends StatelessWidget {

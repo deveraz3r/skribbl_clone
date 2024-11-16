@@ -5,7 +5,7 @@ import 'package:skribbl_clone/models/touch_points.dart';
 
 class MyCustomPainter extends CustomPainter {
   MyCustomPainter({required this.pointsList});
-  List<TouchPoints> pointsList;
+  List<TouchPoints?> pointsList;
   List<Offset> offsetPoints = [];
 
   @override
@@ -24,24 +24,24 @@ class MyCustomPainter extends CustomPainter {
       //current and next points are not null, then draw a line
       if (pointsList[i] != null && pointsList[i + 1] != null) {
         canvas.drawLine(
-          pointsList[i].points,
-          pointsList[i + 1].points,
-          pointsList[i].paint,
+          pointsList[i]!.points,
+          pointsList[i + 1]!.points,
+          pointsList[i]!.paint,
         );
       }
       //if current is not null and next is null, then draw a point
       else if (pointsList[i] != null && pointsList[i + 1] == null) {
         offsetPoints.clear();
-        offsetPoints.add(pointsList[i].points);
+        offsetPoints.add(pointsList[i]!.points);
         offsetPoints.add(Offset(
-          pointsList[i].points.dx + 0.1,
-          pointsList[i].points.dy + 0.1,
+          pointsList[i]!.points.dx + 0.1,
+          pointsList[i]!.points.dy + 0.1,
         ));
 
         canvas.drawPoints(
           ui.PointMode.points,
           offsetPoints,
-          pointsList[i].paint,
+          pointsList[i]!.paint,
         );
       }
     }

@@ -63,7 +63,6 @@ io.on('connection', (socket: Socket) => {
             // Join the room and emit updated data
             socket.join(room.roomName);
             io.to(room.roomName).emit('updateRoom', room);
-            console.log("sending data to updateRoom");
         } catch (err) {
             console.log(err);
         }
@@ -119,19 +118,21 @@ io.on('connection', (socket: Socket) => {
                 return;
             }
             
-            if(room.turnIndex == room.players.length){
+            if(room.turnIndex == room.players.length-1){
                 room.currentRound+=1;
+                // room.turnIndex = 0;
             }
             if(room.currentRound <= room.maxRounds){
                 //continue game with next users turn
                 room.word = getWord();
-                room.turnIndex = (room.turnIndex+1)%room.players.length;
+                room.turnIndex += (room.turnIndex + 1)%room.occupancy;
                 room.turn = room.players[room.turnIndex];
                 await room.save();
                 io.to(roomName).emit("change-turn", room);
             }
             else{
                 //show leader board
+                io.to(roomName).emit("change-turn", room);
             }
         }
         catch(err){
