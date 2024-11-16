@@ -22,10 +22,6 @@ class LeaderBoard extends StatelessWidget {
         padding: const EdgeInsets.all(8.0),
         child: Column(
           children: [
-            const Text(
-              "Score Board",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
             const SizedBox(height: 10),
             Expanded(
               child: ListView.separated(

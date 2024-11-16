@@ -7,13 +7,19 @@ import 'package:socket_io_client/socket_io_client.dart' as IO;
 class PaintViewModel extends GetxController {
   late IO.Socket socket;
 
+  String screenFrom = Get.arguments["from"];
+
   Rx<Map> dataOfRoom = Rx<Map>({});
   Rx<Map> clientData = Rx<Map>({});
   Rx<List<TouchPoints>> points = Rx<List<TouchPoints>>([]);
   Rx<List<Widget>> listOfAlphabets = Rx<List<Widget>>([]);
   Rx<List<List>> messages = Rx<List<List>>([]);
+
+  //paint brush options
+  Rx<StrokeCap> strokeType = StrokeCap.round.obs;
   Rx<Color> selectedColor = Rx<Color>(Colors.black);
   RxDouble strokeWidth = 2.0.obs;
+  RxDouble opacity = (1.0).obs;
 
   Timer? timer;
   RxInt start = 60.obs;
@@ -25,7 +31,7 @@ class PaintViewModel extends GetxController {
   void onInit() {
     super.onInit();
     clientData.value = Get.arguments["data"];
-    String screenFrom = Get.arguments["from"];
+    screenFrom = Get.arguments["from"];
     connectSocket(screenFrom);
   }
 
@@ -43,12 +49,14 @@ class PaintViewModel extends GetxController {
     }
 
     socket.onConnect((_) {
+      //updateRoom
       socket.on("updateRoom", (data) {
         dataOfRoom.value = data;
         if (data["isJoin"] != true) {
           getWord();
           startTimer();
         }
+        update();
       });
 
       socket.on("points", (point) {
@@ -57,13 +65,13 @@ class PaintViewModel extends GetxController {
           double dy = point['details']["dy"];
           points.value.add(TouchPoints(
             paint: Paint()
-              ..color = selectedColor.value
+              ..color = selectedColor.value.withOpacity(opacity.value)
               ..strokeWidth = strokeWidth.value
               ..isAntiAlias = true
-              ..strokeCap = StrokeCap.round,
+              ..strokeCap = strokeType.value,
             points: Offset(dx, dy),
           ));
-          update();
+          // update();
         }
       });
 
@@ -83,7 +91,17 @@ class PaintViewModel extends GetxController {
       socket.on("message", (data) {
         messages.value
             .add([data['playerName'], data['message'], data['isCorrectWord']]);
-        if (data['isCorrectWord']) guessedUserCounter++;
+        if (data['isCorrectWord']) guessedUserCounter.value++;
+
+        //change turn if all players have gussed correct word or time runs out
+        if (guessedUserCounter.value ==
+            dataOfRoom.value['players'].length - 1) {
+          if (clientData.value["playerName"] ==
+              dataOfRoom.value["turn"]["playerName"]) {
+            socket.emit(
+                "change-turn", {'roomName': dataOfRoom.value['roomName']});
+          }
+        }
       });
 
       socket.on("change-turn", (data) {
@@ -104,6 +122,8 @@ class PaintViewModel extends GetxController {
           startTimer();
           Get.back();
         });
+
+        update();
       });
     });
   }
@@ -129,11 +149,13 @@ class PaintViewModel extends GetxController {
     });
   }
 
-  void selectColor(Color color) {
+  void changeColor(Color color) {
     selectedColor.value = color;
     String colorString = color.value.toRadixString(16);
-    socket.emit("color-change",
-        {'color': colorString, 'roomName': dataOfRoom.value['roomName']});
+    socket.emit("color-change", {
+      'color': colorString,
+      'roomName': dataOfRoom.value['roomName'],
+    });
   }
 
   @override
