@@ -6,6 +6,7 @@ import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:get/get.dart';
 import 'package:skribbl_clone/models/my_custom_painter.dart';
 import 'package:skribbl_clone/models/touch_points.dart';
+import 'package:skribbl_clone/views/wating_lobby_view.dart';
 // ignore: library_prefixes
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
@@ -31,6 +32,8 @@ class _PaintViewState extends State<PaintView> {
   int gussedUserCounter = 0;
   int start = 60;
   late Timer _timer;
+
+  final GlobalKey<ScaffoldState> _scaffoldkey = GlobalKey<ScaffoldState>();
 
   //paint brush
   StrokeCap strokeType = StrokeCap.round;
@@ -95,14 +98,19 @@ class _PaintViewState extends State<PaintView> {
 
       //listen to event "updateRoom", when data is recived update the rooms data
       _socket.on("updateRoom", (data) {
+        if (kDebugMode) {
+          print("updateRoom data received: $data");
+        }
         setState(() {
-          dataOfRoom = data;
-          getWord();
+          dataOfRoom = data ?? {};
+          print("Updated dataOfRoom: $dataOfRoom");
         });
+        setState(() {});
 
         if (data["isJoin"] != true) {
           //start the timer
           startTimer();
+          getWord();
         }
       });
 
@@ -247,174 +255,190 @@ class _PaintViewState extends State<PaintView> {
     double width = MediaQuery.sizeOf(context).width;
     double height = MediaQuery.sizeOf(context).height;
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisAlignment: MainAxisAlignment.start,
+    if (dataOfRoom.isEmpty || dataOfRoom['isJoin'] == null) {
+      return const Center(child: CircularProgressIndicator());
+    } else {
+      if (dataOfRoom['isJoin'] == true) {
+        print("on wating room");
+        print(dataOfRoom);
+        return WatingLobbyView(
+          dataofRoom: dataOfRoom,
+        );
+      } else {
+        return Scaffold(
+          key: _scaffoldkey,
+          backgroundColor: Colors.white,
+          body: Stack(
             children: [
-              SizedBox(
-                width: width,
-                height: height * 0.55,
-                child: GestureDetector(
-                  onPanUpdate: (details) {
-                    if (clientData["playerName"] ==
-                        dataOfRoom["turn"]["playerName"]) {
-                      _socket.emit("paint", {
-                        'details': {
-                          'dx': details.localPosition.dx,
-                          'dy': details.localPosition.dy,
-                        },
-                        'roomName': dataOfRoom['roomName'],
-                      });
-                    }
-                  },
-                  onPanStart: (details) {
-                    if (clientData["playerName"] ==
-                        dataOfRoom["turn"]["playerName"]) {
-                      _socket.emit("paint", {
-                        'details': {
-                          'dx': details.localPosition.dx,
-                          'dy': details.localPosition.dy,
-                        },
-                        'roomName': dataOfRoom['roomName'],
-                      });
-                    }
-                  },
-                  onPanEnd: (details) {
-                    if (clientData["playerName"] ==
-                        dataOfRoom["turn"]["playerName"]) {
-                      _socket.emit("paint", {
-                        'details': null,
-                        'roomName': dataOfRoom['roomName'],
-                      });
-                    }
-                  },
-                  child: SizedBox.expand(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: RepaintBoundary(
-                        child: CustomPaint(
-                          painter: MyCustomPainter(pointsList: points),
-                          size: Size.infinite,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: width,
+                    height: height * 0.55,
+                    child: GestureDetector(
+                      onPanUpdate: (details) {
+                        if (clientData["playerName"] ==
+                            dataOfRoom["turn"]["playerName"]) {
+                          _socket.emit("paint", {
+                            'details': {
+                              'dx': details.localPosition.dx,
+                              'dy': details.localPosition.dy,
+                            },
+                            'roomName': dataOfRoom['roomName'],
+                          });
+                        }
+                      },
+                      onPanStart: (details) {
+                        if (clientData["playerName"] ==
+                            dataOfRoom["turn"]["playerName"]) {
+                          _socket.emit("paint", {
+                            'details': {
+                              'dx': details.localPosition.dx,
+                              'dy': details.localPosition.dy,
+                            },
+                            'roomName': dataOfRoom['roomName'],
+                          });
+                        }
+                      },
+                      onPanEnd: (details) {
+                        if (clientData["playerName"] ==
+                            dataOfRoom["turn"]["playerName"]) {
+                          _socket.emit("paint", {
+                            'details': null,
+                            'roomName': dataOfRoom['roomName'],
+                          });
+                        }
+                      },
+                      child: SizedBox.expand(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: RepaintBoundary(
+                            child: CustomPaint(
+                              painter: MyCustomPainter(pointsList: points),
+                              size: Size.infinite,
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ),
-              !(clientData["playerName"] == dataOfRoom["turn"]["playerName"])
-                  ? const SizedBox()
-                  : Row(
-                      children: [
-                        IconButton(
-                          onPressed: selectColor,
-                          icon: Icon(
-                            Icons.color_lens,
-                            color: selectedColor,
-                          ),
-                        ),
-                        Expanded(
-                          child: Slider(
-                            min: 1,
-                            max: 10,
-                            label: "Stroke width $strokeWidth",
-                            value: strokeWidth,
-                            activeColor: selectedColor,
-                            onChanged: (value) {
-                              Map map = {
-                                'width': value,
-                                'roomName': dataOfRoom['roomName'],
-                              };
+                  !(clientData["playerName"] ==
+                          dataOfRoom["turn"]["playerName"])
+                      ? const SizedBox()
+                      : Row(
+                          children: [
+                            IconButton(
+                              onPressed: selectColor,
+                              icon: Icon(
+                                Icons.color_lens,
+                                color: selectedColor,
+                              ),
+                            ),
+                            Expanded(
+                              child: Slider(
+                                min: 1,
+                                max: 10,
+                                label: "Stroke width $strokeWidth",
+                                value: strokeWidth,
+                                activeColor: selectedColor,
+                                onChanged: (value) {
+                                  Map map = {
+                                    'width': value,
+                                    'roomName': dataOfRoom['roomName'],
+                                  };
 
-                              _socket.emit("strokeWidth-change", map);
-                            },
-                          ),
+                                  _socket.emit("strokeWidth-change", map);
+                                },
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () {
+                                _socket.emit("clear-canvas",
+                                    {"roomName": dataOfRoom['roomName']});
+                              },
+                              icon: Icon(
+                                Icons.layers_clear,
+                                color: selectedColor,
+                              ),
+                            ),
+                          ],
                         ),
-                        IconButton(
-                          onPressed: () {
-                            _socket.emit("clear-canvas",
-                                {"roomName": dataOfRoom['roomName']});
-                          },
-                          icon: Icon(
-                            Icons.layers_clear,
-                            color: selectedColor,
-                          ),
-                        ),
-                      ],
-                    ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: listofAlphabets, //word to guess
-              ),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: messages.length,
-                  itemBuilder: (context, index) {
-                    return ListTile(
-                      title: Text(messages[index][0].toString()), //sender name
-                      subtitle: Text(
-                        messages[index][1].toString(), //message
-                        style: TextStyle(
-                          color:
-                              messages[index][2] ? Colors.green : Colors.black,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              (clientData["playerName"] == dataOfRoom["turn"]["playerName"])
-                  ? const SizedBox()
-                  : Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _messageTextController,
-                            decoration: const InputDecoration(
-                              hintText: "Guess word",
-                              border: OutlineInputBorder(),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: listofAlphabets, //word to guess
+                  ),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: messages.length,
+                      itemBuilder: (context, index) {
+                        return ListTile(
+                          title:
+                              Text(messages[index][0].toString()), //sender name
+                          subtitle: Text(
+                            messages[index][1].toString(), //message
+                            style: TextStyle(
+                              color: messages[index][2]
+                                  ? Colors.green
+                                  : Colors.black,
                             ),
                           ),
-                        ),
-                        IconButton(
-                          onPressed: () {
-                            if (_messageTextController.text.isNotEmpty) {
-                              _socket.emit("message", {
-                                'message': _messageTextController.text,
-                                'playerName': clientData['playerName'],
-                                'roomName': dataOfRoom['roomName'],
-                                'roundTime': 60,
-                                'timeTaken': 60 - start,
-                              });
-                              _messageTextController.clear();
-                            }
-                          },
-                          icon: const Icon(Icons.send),
-                        )
-                      ],
+                        );
+                      },
                     ),
-              const SizedBox(
-                height: 10,
-              ),
+                  ),
+                  (clientData["playerName"] == dataOfRoom["turn"]["playerName"])
+                      ? const SizedBox()
+                      : Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _messageTextController,
+                                decoration: const InputDecoration(
+                                  hintText: "Guess word",
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () {
+                                if (_messageTextController.text.isNotEmpty) {
+                                  _socket.emit("message", {
+                                    'message': _messageTextController.text,
+                                    'playerName': clientData['playerName'],
+                                    'roomName': dataOfRoom['roomName'],
+                                    'roundTime': 60,
+                                    'timeTaken': 60 - start,
+                                  });
+                                  _messageTextController.clear();
+                                }
+                              },
+                              icon: const Icon(Icons.send),
+                            )
+                          ],
+                        ),
+                  const SizedBox(
+                    height: 10,
+                  ),
+                ],
+              )
             ],
-          )
-        ],
-      ),
-      floatingActionButton: Container(
-        margin: const EdgeInsets.all(10),
-        child: FloatingActionButton(
-          onPressed: () {},
-          elevation: 7,
-          backgroundColor: Colors.white,
-          child: Text(
-            "$start",
-            style: TextStyle(color: Colors.black, fontSize: 22),
           ),
-        ),
-      ),
-    );
+          floatingActionButton: Container(
+            margin: const EdgeInsets.all(10),
+            child: FloatingActionButton(
+              onPressed: () {},
+              elevation: 7,
+              backgroundColor: Colors.white,
+              child: Text(
+                "$start",
+                style: const TextStyle(color: Colors.black, fontSize: 22),
+              ),
+            ),
+          ),
+        );
+      }
+    }
   }
 }

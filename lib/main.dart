@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:skribbl_clone/utils/routes/routes.dart';
-import 'package:skribbl_clone/views/create_room_view.dart';
-import 'package:skribbl_clone/views/home_view.dart';
-import 'package:skribbl_clone/views/join_room_view.dart';
 
 void main() {
   runApp(const MyApp());

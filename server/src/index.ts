@@ -63,6 +63,7 @@ io.on('connection', (socket: Socket) => {
             // Join the room and emit updated data
             socket.join(room.roomName);
             io.to(room.roomName).emit('updateRoom', room);
+            console.log("sending data to updateRoom");
         } catch (err) {
             console.log(err);
         }
@@ -168,6 +169,8 @@ io.on('connection', (socket: Socket) => {
                 return;
             }
     
+            //TODO: add timer functionality on server side
+            //TODO: add check on users to only guess word one time
             if (message === room.word) {
                 let userPlayer = room.players.find((player) => player.playerName === playerName);
     
@@ -200,3 +203,4 @@ const port = process.env.PORT || 3000;
 server.listen(port, () => {
     console.log("Server started at http://localhost:" + port);
 });
+//TODO: change code to mvvm architecture
