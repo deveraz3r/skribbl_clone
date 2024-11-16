@@ -109,33 +109,40 @@ io.on('connection', (socket: Socket) => {
     });
 
     //change turn
-    socket.on("change-turn", async ({roomName})=>{
-        try{
-            let room = await RoomModel.findOne({roomName});
-
+    socket.on("change-turn", async ({ roomName }) => {
+        try {
+            let room = await RoomModel.findOne({ roomName });
+    
             if (!room) {
                 console.log("Room not found");
                 return;
             }
-            
-            if(room.turnIndex == room.players.length-1){
-                room.currentRound+=1;
-                // room.turnIndex = 0;
-            }
-            if(room.currentRound <= room.maxRounds){
-                //continue game with next users turn
+    
+            // Check if the current round can continue
+            if (room.currentRound <= room.maxRounds) {
+                // Update turn index and round
+                if (room.turnIndex === room.players.length - 1) {
+                    // Last player's turn, move to the next round
+                    room.currentRound += 1;
+                    room.turnIndex = 0; // Reset turn index to 0
+                } else {
+                    // Move to the next player's turn
+                    room.turnIndex += 1;
+                }
+    
+                // Set a new word and update the current turn
                 room.word = getWord();
-                room.turnIndex += (room.turnIndex + 1)%room.occupancy;
                 room.turn = room.players[room.turnIndex];
+    
                 await room.save();
+    
+                // Emit the updated room state to the room
+                io.to(roomName).emit("change-turn", room);
+            } else {
+                // Emit final state or leaderboard if max rounds are reached
                 io.to(roomName).emit("change-turn", room);
             }
-            else{
-                //show leader board
-                io.to(roomName).emit("change-turn", room);
-            }
-        }
-        catch(err){
+        } catch (err) {
             console.log(err);
         }
     });
