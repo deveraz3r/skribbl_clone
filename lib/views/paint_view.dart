@@ -66,73 +66,49 @@ class PaintView extends StatelessWidget {
         return LeaderBoard(dataOfRoom: controller.dataOfRoom.value);
       } else {
         // Game is in progress, show game screen
-        return Obx(
-          () => Scaffold(
-            key: _scaffoldkey,
-            drawer: Obx(
-              () => ScoreBoardDrawer(dataOfRoom: controller.dataOfRoom.value),
+        return Scaffold(
+          key: _scaffoldkey,
+          drawer: Obx(
+            () => ScoreBoardDrawer(dataOfRoom: controller.dataOfRoom.value),
+          ),
+          resizeToAvoidBottomInset:
+              true, // Ensures that the body resizes when keyboard opens
+          backgroundColor: Colors.white,
+          appBar: AppBar(
+            title: const Text("Skribbl"),
+            leading: IconButton(
+              onPressed: () {
+                _scaffoldkey.currentState?.openDrawer();
+              },
+              icon: const Icon(Icons.menu),
             ),
-            resizeToAvoidBottomInset:
-                true, // Ensures that the body resizes when keyboard opens
-            backgroundColor: Colors.white,
-            appBar: AppBar(
-              title: const Text("Skribbl"),
-              leading: IconButton(
-                onPressed: () {
-                  _scaffoldkey.currentState?.openDrawer();
-                },
-                icon: const Icon(Icons.menu),
-              ),
-            ),
-            body: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                // Drawing Canvas
-                SizedBox(
-                  width: width,
-                  height: height * 0.45,
-                  child: GestureDetector(
-                    onPanUpdate: (details) {
-                      if (controller.clientData.value["playerName"] ==
-                          controller.dataOfRoom.value["turn"]["playerName"]) {
-                        controller.socket.emit("paint", {
-                          'details': {
-                            'dx': details.localPosition.dx,
-                            'dy': details.localPosition.dy,
-                          },
-                          'roomName': controller.dataOfRoom.value['roomName'],
-                        });
-                      }
-                    },
-                    onPanStart: (details) {
-                      if (controller.clientData.value["playerName"] ==
-                          controller.dataOfRoom.value["turn"]["playerName"]) {
-                        controller.socket.emit("paint", {
-                          'details': {
-                            'dx': details.localPosition.dx,
-                            'dy': details.localPosition.dy,
-                          },
-                          'roomName': controller.dataOfRoom.value['roomName'],
-                        });
-                      }
-                    },
-                    onPanEnd: (details) {
-                      if (controller.clientData.value["playerName"] ==
-                          controller.dataOfRoom.value["turn"]["playerName"]) {
-                        controller.socket.emit("paint", {
-                          'details': null,
-                          'roomName': controller.dataOfRoom.value['roomName'],
-                        });
-                      }
-                    },
-                    child: SizedBox.expand(
-                      child: Container(
-                        color: Colors.red,
-                        padding: const EdgeInsets.all(8.0),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(20),
-                          child: RepaintBoundary(
+          ),
+          body: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              // Drawing Canvas
+              SizedBox(
+                width: width,
+                height: height * 0.45,
+                child: GestureDetector(
+                  onPanUpdate: (details) {
+                    controller.paintPoints(details.localPosition);
+                  },
+                  onPanStart: (details) {
+                    controller.paintPoints(details.localPosition);
+                  },
+                  onPanEnd: (details) {
+                    controller.paintPoints(null);
+                  },
+                  child: SizedBox.expand(
+                    child: Container(
+                      color: Colors.red, //TODO: remove this
+                      padding: const EdgeInsets.all(8.0),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: Obx(
+                          () => RepaintBoundary(
                             child: CustomPaint(
                               painter: MyCustomPainter(
                                 pointsList: controller.points.value,
@@ -145,19 +121,23 @@ class PaintView extends StatelessWidget {
                     ),
                   ),
                 ),
-                // Controls for drawing (Color, Stroke Width, Clear Canvas)
-                controller.clientData.value["playerName"] ==
-                        controller.dataOfRoom.value["turn"]["playerName"]
-                    ? Row(
-                        children: [
-                          IconButton(
+              ),
+              // Controls for drawing (Color, Stroke Width, Clear Canvas)
+              controller.clientData.value["playerName"] ==
+                      controller.dataOfRoom.value["turn"]["playerName"]
+                  ? Row(
+                      children: [
+                        Obx(
+                          () => IconButton(
                             onPressed: selectColor,
                             icon: Icon(
                               Icons.color_lens,
                               color: controller.selectedColor.value,
                             ),
                           ),
-                          Expanded(
+                        ),
+                        Obx(
+                          () => Expanded(
                             child: Slider(
                               min: 1,
                               max: 10,
@@ -177,7 +157,9 @@ class PaintView extends StatelessWidget {
                               },
                             ),
                           ),
-                          IconButton(
+                        ),
+                        Obx(
+                          () => IconButton(
                             onPressed: () {
                               controller.socket.emit("clear-canvas", {
                                 "roomName":
@@ -189,17 +171,21 @@ class PaintView extends StatelessWidget {
                               color: controller.selectedColor.value,
                             ),
                           ),
-                        ],
-                      )
-                    : const SizedBox(),
-                // Word to Guess (Underscores for others, Word for Drawer)
-                Row(
+                        ),
+                      ],
+                    )
+                  : const SizedBox(),
+              // Word to Guess (Underscores for others, Word for Drawer)
+              Obx(
+                () => Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: controller.listOfAlphabets.value,
                 ),
-                // Chat Messages
-                Expanded(
-                  child: ListView.builder(
+              ),
+              // Chat Messages
+              Expanded(
+                child: Obx(
+                  () => ListView.builder(
                     itemCount: controller.messages.value.length,
                     itemBuilder: (context, index) {
                       return ListTile(
@@ -218,54 +204,56 @@ class PaintView extends StatelessWidget {
                     },
                   ),
                 ),
-                // Guess Word Input (Only for non-drawers)
-                controller.clientData.value["playerName"] ==
-                        controller.dataOfRoom.value["turn"]["playerName"]
-                    ? const SizedBox()
-                    : Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: controller.messageTextController,
-                              decoration: const InputDecoration(
-                                hintText: "Guess word",
-                                border: OutlineInputBorder(),
-                              ),
+              ),
+              // Guess Word Input (Only for non-drawers)
+              controller.clientData.value["playerName"] ==
+                      controller.dataOfRoom.value["turn"]["playerName"]
+                  ? const SizedBox()
+                  : Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: controller.messageTextController,
+                            decoration: const InputDecoration(
+                              hintText: "Guess word",
+                              border: OutlineInputBorder(),
                             ),
                           ),
-                          IconButton(
-                            onPressed: () {
-                              if (controller
-                                  .messageTextController.text.isNotEmpty) {
-                                controller.socket.emit("message", {
-                                  'message':
-                                      controller.messageTextController.text,
-                                  'playerName':
-                                      controller.clientData.value['playerName'],
-                                  'roomName':
-                                      controller.dataOfRoom.value['roomName'],
-                                  'roundTime': 60,
-                                  'timeTaken': 60 - controller.start.value,
-                                });
-                                controller.messageTextController.clear();
-                              }
-                            },
-                            icon: const Icon(Icons.send),
-                          ),
-                        ],
-                      ),
-                const SizedBox(
-                  height: 10,
-                ),
-              ],
-            ),
-            floatingActionButton: Container(
-              margin: const EdgeInsets.all(10),
-              child: FloatingActionButton(
-                onPressed: () {},
-                elevation: 7,
-                backgroundColor: Colors.white,
-                child: Text(
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            if (controller
+                                .messageTextController.text.isNotEmpty) {
+                              controller.socket.emit("message", {
+                                'message':
+                                    controller.messageTextController.text,
+                                'playerName':
+                                    controller.clientData.value['playerName'],
+                                'roomName':
+                                    controller.dataOfRoom.value['roomName'],
+                                'roundTime': 60,
+                                'timeTaken': 60 - controller.start.value,
+                              });
+                              controller.messageTextController.clear();
+                            }
+                          },
+                          icon: const Icon(Icons.send),
+                        ),
+                      ],
+                    ),
+              const SizedBox(
+                height: 10,
+              ),
+            ],
+          ),
+          floatingActionButton: Container(
+            margin: const EdgeInsets.all(10),
+            child: FloatingActionButton(
+              onPressed: () {},
+              elevation: 7,
+              backgroundColor: Colors.white,
+              child: Obx(
+                () => Text(
                   "${controller.start.value}",
                   style: const TextStyle(color: Colors.black, fontSize: 22),
                 ),

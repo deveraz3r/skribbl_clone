@@ -158,6 +158,21 @@ class PaintViewModel extends GetxController {
     });
   }
 
+  void paintPoints(Offset? localpoistion) {
+    if (clientData.value["playerName"] ==
+        dataOfRoom.value["turn"]["playerName"]) {
+      socket.emit("paint", {
+        'details': (localpoistion == null)
+            ? null
+            : {
+                'dx': localpoistion.dx,
+                'dy': localpoistion.dy,
+              },
+        'roomName': dataOfRoom.value['roomName'],
+      });
+    }
+  }
+
   @override
   void onClose() {
     socket.dispose();
