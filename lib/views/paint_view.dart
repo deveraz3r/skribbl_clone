@@ -52,6 +52,7 @@ class PaintView extends StatelessWidget {
     }
 
     return GetBuilder<PaintViewModel>(builder: (_) {
+      print("building form scratch");
       if (controller.dataOfRoom.value.isEmpty ||
           controller.dataOfRoom.value['isJoin'] == null) {
         // There is no data returned from server, show loading icon

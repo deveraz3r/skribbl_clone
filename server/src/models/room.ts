@@ -8,6 +8,7 @@ export interface IRoom extends Document {
     maxRounds: number;
     currentRound: number;
     turnIndex: number;
+    gussedPlayers: string[];
     players: IPlayer[];
     turn: IPlayer | null;
     isJoin: boolean;
@@ -20,6 +21,7 @@ const RoomSchema = new Schema<IRoom>({
     maxRounds: { type: Number, required: true },
     currentRound: { type: Number, default: 1 },
     turnIndex: { type: Number, default: 0 },
+    gussedPlayers: {type: [String], default: []},
     players: { type: [PlayerSchema], required: true },
     turn: { type: PlayerSchema, default: null },
     isJoin: { type: Boolean, default: true },

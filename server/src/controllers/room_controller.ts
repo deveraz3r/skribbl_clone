@@ -75,18 +75,20 @@ export class RoomController {
         }
 
         room.word = getWord();  //get new word for next round
+        room.gussedPlayers = []; //remove gussedPlayers for next round
         room.turn = room.players[room.turnIndex];   //Set next player as the turn holder
 
         return await room.save();
     }
 
     // Handle the message sent by a player (guessing the word)
-    static async handleMessage(roomName: string, playerName: string, message: string, timeTaken: number): Promise<{ room: IRoom; isCorrectWord: boolean }> {
+    static async handleMessage(roomName: string, playerName: string, message: string, timeTaken: number): Promise<{ room: IRoom; isCorrectWord: boolean, alreadyGussed: boolean }> {
         //find room by name
         const room = await RoomModel.findOne({ roomName });
         if (!room) throw new Error("Room not found!");  // Emit error if room does not exist
 
-        let isCorrectWord = false;
+        let isCorrectWord: boolean = false;
+        let alreadyGussed: boolean = false;
 
         //If the message matches the word, award points to the player
         if (message === room.word) {
@@ -94,9 +96,17 @@ export class RoomController {
             if (player && timeTaken > 0) {
                 player.points += Math.round(200 / timeTaken) * 10;
             }
+
+            //check it users had already gussed it?
+            alreadyGussed = room.gussedPlayers.includes(playerName);
+
+            if (!alreadyGussed){
+                room.gussedPlayers.push(playerName);    //add user to gussed user if not added already
+            }
+
             isCorrectWord = true;
         }
 
-        return { room: await room.save(), isCorrectWord };
+        return { room: await room.save(), isCorrectWord, alreadyGussed };
     }
 }

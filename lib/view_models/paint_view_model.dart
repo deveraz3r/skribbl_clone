@@ -71,7 +71,7 @@ class PaintViewModel extends GetxController {
               ..strokeCap = strokeType.value,
             points: Offset(dx, dy),
           ));
-          // update();
+          update();
         }
       });
 
@@ -89,9 +89,15 @@ class PaintViewModel extends GetxController {
       });
 
       socket.on("message", (data) {
+        if (data['isCorrectWord']) {
+          if (data['alreadyGussed']) {
+            data['message'] = "Already Gussed!";
+          } else {
+            guessedUserCounter.value++;
+          }
+        }
         messages.value
             .add([data['playerName'], data['message'], data['isCorrectWord']]);
-        if (data['isCorrectWord']) guessedUserCounter.value++;
 
         //change turn if all players have gussed correct word or time runs out
         if (guessedUserCounter.value ==
@@ -102,6 +108,7 @@ class PaintViewModel extends GetxController {
                 "change-turn", {'roomName': dataOfRoom.value['roomName']});
           }
         }
+        update();
       });
 
       socket.on("change-turn", (data) {

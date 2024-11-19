@@ -40,11 +40,12 @@ export function initSocketHandlers(io: SocketIOServer) {
         //messages socket
         socket.on("message", async ({ roomName, playerName, message, timeTaken }) => {
             try {
-                const { room, isCorrectWord } = await RoomController.handleMessage(roomName, playerName, message, timeTaken);
+                const { room, isCorrectWord, alreadyGussed } = await RoomController.handleMessage(roomName, playerName, message, timeTaken);
                 io.to(roomName).emit("message", {
                     playerName,
                     message: isCorrectWord ? "Guessed it!" : message,
-                    isCorrectWord,
+                    isCorrectWord: isCorrectWord,
+                    alreadyGussed: alreadyGussed,
                 });
             } catch (err) {
                 console.error(err);
