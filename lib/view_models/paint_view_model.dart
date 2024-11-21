@@ -86,6 +86,7 @@ class PaintViewModel extends GetxController {
 
       socket.on("clear-canvas", (_) {
         points.value.clear();
+        update();
       });
 
       socket.on("message", (data) {
@@ -128,9 +129,8 @@ class PaintViewModel extends GetxController {
           timer?.cancel();
           startTimer();
           Get.back();
+          update();
         });
-
-        update();
       });
     });
   }
